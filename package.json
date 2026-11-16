@@ -1,0 +1,12 @@
+{
+  "name": "3d-fgu-archipelago",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  }
+}

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>佛光科技設計學習群島 | 3D 微縮城市探索導覽</title>
+  <meta name="description" content="佛光大學應用科技與設計學院 3D 微縮學習群島探索網站。探索學組特色、原創島民對話、跨領域迷你任務與最新公告。">
+  
+  <!-- Favicon Hexagon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5' fill='%233b82f6'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='42' fill='white' font-family='sans-serif' font-weight='bold'>F</text></svg>">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css?v=3.1">
+
+
+</head>
+<body>
+
+  <!-- WebGL 3D Canvas -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- 2D 無障礙降級視圖 (Fallback View) -->
+  <section id="fallback-view" aria-label="2D無障礙學組清單模式">
+    <div class="fallback-container">
+      <div class="fallback-intro-card">
+        <h2>佛光大學應用科技與設計學院 學習群島 (2D無障礙模式)</h2>
+        <p style="margin-top: 8px; color: var(--text-muted); font-size: 0.9rem;">
+          當前處於 2D 輔助模式。本模式提供完整的學系資訊、島長問答、迷你任務與公告清單，適用於無障礙閱讀與低頻寬設備。
+        </p>
+        <button id="btn-return-3d" class="btn-pill primary" style="margin-top: 14px;">切換回 3D 微縮群島</button>
+      </div>
+
+      <div class="fallback-grid" id="fallback-island-list">
+        <!-- 由 JS 動態注入各學組卡片 -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 互動遮罩 (Backdrop) -->
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+
+  <!-- UI 浮動控制層 -->
+  <div id="ui-container">
+
+    <!-- 頂部導航列 -->
+    <header class="top-navbar">
+      <div class="brand-wrapper">
+        <div class="brand-logo-hex" title="佛光應用科技與設計學院">F</div>
+        <div class="brand-title-group">
+          <h1>佛光科技設計學習群島</h1>
+          <div class="sub-title">
+            <span>應用科技與設計學院</span>
+            <span class="status-badge" id="network-status-badge">
+              <span class="status-dot"></span>
+              <span id="network-status-text">連線偵測中...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn-pill" id="btn-toggle-2d" title="切換 2D / 3D 模式">
+          <span>📐</span>
+          <span id="toggle-view-text">2D 模式</span>
+        </button>
+        <button class="btn-pill" id="btn-reset-progress" title="重置已完成任務與徽章進度">
+          <span>🔄</span>
+          <span>重置進度</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 開場導覽浮層 (Cinematic Intro) -->
+    <div id="intro-overlay">
+      <div class="intro-text">
+        <span>🎬</span>
+        <span>微縮群島開場空拍導覽中... (點擊跳過立即登島)</span>
+      </div>
+      <button class="btn-skip" id="btn-skip-intro">跳過導覽 (Skip)</button>
+    </div>
+
+    <!-- 鍵盤滑鼠操作提示 -->
+    <div class="controls-tooltip">
+      <span>🖱️ 左鍵旋轉場景 | 滾輪縮放 | 點擊島嶼與地標登陸對話</span>
+    </div>
+
+    <!-- 底部導覽與功能區 -->
+    <footer class="bottom-dock">
+      <!-- 快速切換學組島嶼 -->
+      <nav class="island-chips-container" id="island-chips-nav" aria-label="學組島嶼快速導覽">
+        <!-- 由 JS 動態產生各島晶片 -->
+      </nav>
+
+      <!-- 快捷工具抽屜按鈕 -->
+      <div class="dock-tools">
+        <button class="tool-fab" id="btn-open-announcements" title="開啟最新公告與Moodle快訊">
+          <span>📢</span>
+          <span>院系公告</span>
+          <span class="badge-counter" id="unread-news-count">6</span>
+        </button>
+        <button class="tool-fab" id="btn-open-quests" title="檢視當前學習任務與已解鎖成就">
+          <span>🏆</span>
+          <span>探索成就</span>
+          <span class="badge-counter" id="unlocked-badge-count">0</span>
+        </button>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ========================================================
+       NPC 選單式對話框 (Dialogue Modal)
+       ======================================================== -->
+  <aside class="dialogue-modal" id="dialogue-modal" aria-labelledby="dialogue-speaker-name" role="dialog">
+    <div class="dialogue-header">
+      <div class="speaker-profile">
+        <div class="speaker-avatar" id="dialogue-avatar">🤖</div>
+        <div class="speaker-info">
+          <h3 id="dialogue-speaker-name">
+            <span id="speaker-title">艾達·資應島長</span>
+            <span class="speaker-tag" id="speaker-tag">島長 NPC</span>
+          </h3>
+          <p class="speaker-desc" id="dialogue-speaker-desc">精通演算法架構與人工智慧模型，引導新生探索資訊科技。</p>
+        </div>
+      </div>
+      <button class="btn-close" id="btn-close-dialogue" aria-label="關閉對話框">✕</button>
+    </div>
+
+    <!-- 選單式問答列表 (Menu View) -->
+    <div class="dialogue-menu-list" id="dialogue-menu-list">
+      <button class="dialogue-menu-btn" data-qa-index="0">
+        <div><span class="menu-prefix">1</span>這裡學什麼？</div>
+        <span>➔</span>
+      </button>
+      <button class="dialogue-menu-btn" data-qa-index="1">
+        <div><span class="menu-prefix">2</span>有哪些課程或活動？</div>
+        <span>➔</span>
+      </button>
+      <button class="dialogue-menu-btn" data-qa-index="2">
+        <div><span class="menu-prefix">3</span>從哪裡開始探索？</div>
+        <span>➔</span>
+      </button>
+    </div>
+
+    <!-- 問答詳情視圖 (QA Detail View) -->
+    <div class="qa-detail-view" id="qa-detail-view">
+      <div class="qa-question-title" id="qa-detail-title">
+        <span>❓</span>
+        <span id="qa-detail-qtext">題目內容</span>
+      </div>
+      <div class="qa-answer-text" id="qa-detail-answer">回答內容...</div>
+      
+      <!-- 官方資料溯源連結 -->
+      <div style="margin-bottom: 12px;">
+        <a href="https://tech.fgu.edu.tw/?locale=zh_tw" target="_blank" rel="noopener noreferrer" class="official-source-pill" id="qa-official-link">
+          <span>🔗</span>
+          <span id="qa-official-label">查閱官網正式資料</span>
+          <span>↗</span>
+        </a>
+      </div>
+
+      <button class="btn-pill" id="btn-qa-back">
+        <span>⬅</span>
+        <span>返回問答選單</span>
+      </button>
+    </div>
+
+    <!-- 底部操作列 -->
+    <div class="dialogue-footer">
+      <div style="font-size: 0.78rem; color: var(--text-muted);">
+        <span>💡 提問後可接取該學組專屬迷你任務</span>
+      </div>
+      <button class="btn-pill primary" id="btn-start-quest">
+        <span>⚔️</span>
+        <span>接取迷你任務</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========================================================
+       迷你任務視窗 (Mini-Quest Modal)
+       ======================================================== -->
+  <section class="quest-modal" id="quest-modal" role="dialog" aria-labelledby="quest-modal-title">
+    <div class="quest-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="quest-badge-tag" id="quest-badge-name">任務進行中</span>
+        <h3 id="quest-modal-title" style="font-size: 1.05rem;">啟動演算法魔方塔</h3>
+      </div>
+      <button class="btn-close" id="btn-close-quest" aria-label="關閉任務視窗">✕</button>
+    </div>
+
+    <div class="quest-prompt" id="quest-prompt-text">
+      位元貓頭鷹在魔方塔基座發現了一組運算邏輯：要維持 Three.js 60 FPS 順暢微縮動畫，最常調用哪個原生 API？
+    </div>
+
+    <div class="quest-options-list" id="quest-options-container">
+      <!-- 由 JS 產生選項按鈕 -->
+    </div>
+
+    <!-- 解題反饋與跨領域解析 -->
+    <div class="quest-result-box" id="quest-result-box">
+      <div id="quest-result-message"></div>
+      <div class="cross-island-box" id="quest-cross-island-box"></div>
+    </div>
+
+    <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+      <button class="btn-pill" id="btn-quest-cancel">稍後再做</button>
+      <button class="btn-pill primary" id="btn-quest-submit">送出答案</button>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       成就與進度面板 (Quests Drawer)
+       ======================================================== -->
+  <aside class="announcement-drawer" id="quests-drawer" role="dialog" aria-label="學習成就進度">
+    <div class="drawer-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.3rem;">🏆</span>
+        <h2 style="font-size: 1.1rem; font-weight: 700;">探索進度與成就徽章</h2>
+      </div>
+      <button class="btn-close" id="btn-close-quests-drawer" aria-label="關閉成就面板">✕</button>
+    </div>
+
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+      <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+        群島探索完成度：<span id="progress-percentage-text" style="color: var(--primary-blue);">0%</span>
+      </div>
+      <div style="background: #e2e8f0; height: 8px; border-radius: var(--radius-full); overflow: hidden;">
+        <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary-blue), var(--primary-yellow)); transition: width 0.4s ease;"></div>
+      </div>
+    </div>
+
+    <h4 style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 10px;">已獲得之學習徽章 (LocalStorage 保存)：</h4>
+    <div class="announcements-list" id="badges-container">
+      <!-- 由 JS 渲染徽章卡片 -->
+    </div>
+  </aside>
+
+  <!-- ========================================================
+       院系消息與 Moodle 公告抽屜 (Announcements Drawer)
+       ======================================================== -->
+  <aside class="announcement-drawer" id="announcements-drawer" role="dialog" aria-label="消息公告">
+    <div class="drawer-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.3rem;">📢</span>
+        <h2 style="font-size: 1.1rem; font-weight: 700;">院系消息與課程公告</h2>
+      </div>
+      <button class="btn-close" id="btn-close-announcements" aria-label="關閉公告抽屜">✕</button>
+    </div>
+
+    <!-- 搜尋框 -->
+    <div class="search-box-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="news-search-input" class="search-input" placeholder="搜尋公告關鍵字 (例：AI, 競賽, Moodle, 課程)...">
+    </div>
+
+    <!-- 標籤篩選列 -->
+    <div class="filter-tags-scroll" id="news-filter-tags">
+      <button class="filter-tag-btn active" data-filter="ALL">全部消息</button>
+      <button class="filter-tag-btn" data-filter="Moodle課程">Moodle課程</button>
+      <button class="filter-tag-btn" data-filter="官方新聞">官方新聞</button>
+      <button class="filter-tag-btn" data-filter="榮譽獲獎">榮譽獲獎</button>
+      <button class="filter-tag-btn" data-filter="特色課程">特色課程</button>
+    </div>
+
+    <!-- 公告動態列表 -->
+    <div class="announcements-list" id="announcements-list-container">
+      <!-- 由 JS 注入公告卡片 -->
+    </div>
+  </aside>
+
+  <!-- 核心腳本庫：全面相容 file:/// 本機雙擊直接開啟 與 http:// 伺服器訪問 -->
+  <script src="./js/lib/three.standalone.js"></script>
+  <script src="./js/lib/OrbitControls.standalone.js"></script>
+  <script src="./js/data.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+</html>
